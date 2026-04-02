@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéOrder | Tracker Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        
+        :root {
+            --bg-main: #0b0f1a;
+            --card-bg: #161e2d;
+            --accent: #6366f1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: #e2e8f0;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(22, 30, 45, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .input-style {
+            background: #1f2937;
+            border: 1px solid #374151;
+            color: white;
+            appearance: none;
+        }
+
+        .input-style:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-active {
+            color: white;
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .payment-toggle {
+            display: flex;
+            background: #1f2937;
+            padding: 4px;
+            border-radius: 12px;
+        }
+        
+        .payment-toggle button {
+            flex: 1;
+            padding: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .payment-toggle .active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .countdown-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .image-preview-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #1f2937;
+        }
+    </style>
+</head>
+<body class="p-3 md:p-8 pb-20">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white italic">
+                        POKÉ<span class="text-indigo-500">ORDER</span>
+                    </h1>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Pre-order Management</p>
+                </div>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto">
+                    <div class="stat-card p-3 rounded-2xl">
+                        <span class="block text-[9px] uppercase tracking-widest text-slate-500 mb-1">Active Portfolio</span>
+                        <span id="stat-total-val" class="text-lg font-bold text-white">$0.00</span>
+                    </div>
+                    <div class="stat-card p-3 rounded-2xl">
+                        <span class="block text-[9px] uppercase tracking-widest text-slate-500 mb-1">Paid Deposits</span>
+                        <span id="stat-paid" class="text-lg font-bold text-emerald-400">$0.00</span>
+                    </div>
+                    <div class="stat-card p-3 rounded-2xl border-indigo-500/30 bg-indigo-500/5 col-span-2 sm:col-span-1">
+                        <span class="block text-[9px] uppercase tracking-widest text-indigo-400 mb-1 font-bold">Total Balance Due</span>
+                        <span id="stat-balance" class="text-lg font-bold text-indigo-400">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Milestone Banners -->
+            <div id="milestone-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 hidden">
+                <!-- Next Release -->
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-indigo-500 flex items-center justify-between">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="bg-indigo-500/20 p-2 rounded-xl flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="truncate">
+                            <span class="block text-[9px] font-bold text-indigo-400 uppercase tracking-widest">Next Release</span>
+                            <h2 id="next-item-title" class="text-xs font-bold text-white truncate">---</h2>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 ml-2">
+                        <div class="text-center">
+                            <span id="next-days" class="block text-xl font-black text-white leading-none countdown-pulse">0</span>
+                            <span class="text-[8px] uppercase text-slate-500 font-bold">Days</span>
+                        </div>
+                        <div class="w-[1px] h-6 bg-slate-800"></div>
+                        <div class="text-right">
+                            <span id="next-balance" class="block text-sm font-bold text-white leading-none">$0.00</span>
+                            <span class="text-[8px] uppercase text-slate-500 font-bold">Owed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming -->
+                <div id="upcoming-milestone" class="glass-panel p-4 rounded-2xl border-l-4 border-slate-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="bg-slate-700/30 p-2 rounded-xl flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div class="truncate">
+                            <span class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Following</span>
+                            <h2 id="upcoming-item-title" class="text-xs font-bold text-slate-300 truncate">---</h2>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 ml-2">
+                        <div class="text-center">
+                            <span id="upcoming-days" class="block text-xl font-black text-slate-300 leading-none">0</span>
+                            <span class="text-[8px] uppercase text-slate-500 font-bold">Days</span>
+                        </div>
+                        <div class="w-[1px] h-6 bg-slate-800"></div>
+                        <div class="text-right">
+                            <span id="upcoming-balance" class="block text-sm font-bold text-slate-400 leading-none">$0.00</span>
+                            <span class="text-[8px] uppercase text-slate-500 font-bold">Owed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+            <!-- Sidebar: Add Form -->
+            <div class="lg:col-span-4 order-2 lg:order-1">
+                <div class="glass-panel p-5 rounded-3xl sticky top-8">
+                    <h3 class="text-lg font-bold mb-5 flex items-center gap-2 text-white">
+                        New Pre-Order
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Product Set</label>
+                                <input type="text" id="setName" placeholder="e.g. Paldea Evolved" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Item Name</label>
+                                <input type="text" id="itemName" placeholder="e.g. Elite Trainer Box" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Merchant</label>
+                                <input type="text" id="merchant" placeholder="Store Name" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Release Date</label>
+                                <input type="date" id="launchDate" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+
+                            <div class="col-span-2">
+                                <div class="payment-toggle">
+                                    <button id="pay-type-deposit" onclick="setPaymentType('deposit')" class="active">Deposit</button>
+                                    <button id="pay-type-full" onclick="setPaymentType('full')">Paid Full</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Unit Price ($)</label>
+                                <input type="number" id="totalPrice" oninput="handlePriceSync()" placeholder="0.00" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label id="depositLabel" class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Paid Already ($)</label>
+                                <input type="number" id="deposit" oninput="updateBalancePreview()" placeholder="0.00" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Item Image</label>
+                                <input type="file" id="itemImage" accept="image/*" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30">
+                            </div>
+                        </div>
+
+                        <button onclick="addOrder()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95">
+                            Track Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Area -->
+            <div class="lg:col-span-8 order-1 lg:order-2">
+                <div class="flex gap-6 border-b border-slate-800 mb-6 px-2 overflow-x-auto no-scrollbar">
+                    <button onclick="switchTab('active')" id="tab-btn-active" class="pb-3 text-sm font-bold uppercase tracking-widest whitespace-nowrap tab-active">
+                        Active <span id="count-active" class="ml-1 opacity-40">0</span>
+                    </button>
+                    <button onclick="switchTab('archive')" id="tab-btn-archive" class="pb-3 text-sm font-bold uppercase tracking-widest whitespace-nowrap text-slate-500">
+                        Archive <span id="count-archive" class="ml-1 opacity-40">0</span>
+                    </button>
+                </div>
+
+                <div id="archive-stats" class="hidden mb-6">
+                    <div class="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl flex justify-between items-center">
+                        <div>
+                            <span class="block text-[10px] font-bold text-emerald-500/70 uppercase tracking-widest">Total Archived Spent</span>
+                            <p class="text-[10px] text-slate-500 italic">Total value of all collected items</p>
+                        </div>
+                        <span id="stat-archive-total" class="text-2xl font-black text-emerald-400">$0.00</span>
+                    </div>
+                </div>
+
+                <div id="tab-content-active">
+                    <div id="orderList" class="space-y-3"></div>
+                </div>
+
+                <div id="tab-content-archive" class="hidden">
+                    <div id="archiveList" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Dialog -->
+    <div id="duplicate-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-50 p-6">
+        <div class="glass-panel p-8 rounded-3xl max-w-sm w-full border border-indigo-500/30 text-center">
+            <h3 class="text-xl font-bold text-white mb-2">Item Exists</h3>
+            <p class="text-slate-400 text-sm mb-6">Found an existing tracker for this item at this store. Merge them?</p>
+            <div class="flex flex-col gap-3">
+                <button id="btn-merge" class="w-full bg-indigo-600 py-4 rounded-2xl font-bold text-white">Add to Quantity</button>
+                <button id="btn-cancel-merge" class="w-full bg-slate-800 py-4 rounded-2xl font-bold text-slate-400">Add Separately</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let orders = JSON.parse(localStorage.getItem('pokeTracker_img_v1')) || [];
+        let pendingOrder = null;
+        let currentTab = 'active';
+        let currentPaymentType = 'deposit';
+
+        function saveAndRender() {
+            localStorage.setItem('pokeTracker_img_v1', JSON.stringify(orders));
+            renderDashboard();
+        }
+
+        function setPaymentType(type) {
+            currentPaymentType = type;
+            document.getElementById('pay-type-deposit').className = type === 'deposit' ? 'active' : '';
+            document.getElementById('pay-type-full').className = type === 'full' ? 'active' : '';
+            document.getElementById('deposit').disabled = type === 'full';
+            if (type === 'full') handlePriceSync();
+            updateBalancePreview();
+        }
+
+        function handlePriceSync() {
+            if (currentPaymentType === 'full') {
+                document.getElementById('deposit').value = document.getElementById('totalPrice').value;
+            }
+        }
+
+        function updateBalancePreview() {
+            // Internal calculation only for form feedback
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-btn-active').className = `pb-3 text-sm font-bold uppercase tracking-widest ${tab === 'active' ? 'tab-active' : 'text-slate-500'}`;
+            document.getElementById('tab-btn-archive').className = `pb-3 text-sm font-bold uppercase tracking-widest ${tab === 'archive' ? 'tab-active' : 'text-slate-500'}`;
+            document.getElementById('tab-content-active').classList.toggle('hidden', tab !== 'active');
+            document.getElementById('tab-content-archive').classList.toggle('hidden', tab !== 'archive');
+            document.getElementById('archive-stats').classList.toggle('hidden', tab !== 'archive');
+            renderDashboard();
+        }
+
+        function calculateStats() {
+            let totalVal = 0, totalPaid = 0, totalBalance = 0, archiveTotal = 0;
+            const today = new Date().setHours(0,0,0,0);
+
+            orders.forEach(o => {
+                const rowTotal = o.total * (o.qty || 1);
+                if (!o.archived) {
+                    totalVal += rowTotal;
+                    totalPaid += o.deposit;
+                    totalBalance += Math.max(0, rowTotal - o.deposit);
+                } else {
+                    archiveTotal += rowTotal;
+                }
+            });
+
+            document.getElementById('stat-total-val').innerText = `$${totalVal.toFixed(2)}`;
+            document.getElementById('stat-paid').innerText = `$${totalPaid.toFixed(2)}`;
+            document.getElementById('stat-balance').innerText = `$${totalBalance.toFixed(2)}`;
+            document.getElementById('stat-archive-total').innerText = `$${archiveTotal.toFixed(2)}`;
+            document.getElementById('count-active').innerText = orders.filter(o => !o.archived).length;
+            document.getElementById('count-archive').innerText = orders.filter(o => o.archived).length;
+
+            // Milestones Logic
+            const future = orders.filter(o => !o.archived && o.date && new Date(o.date) >= today)
+                                .sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            const mContainer = document.getElementById('milestone-container');
+            if (future.length > 0) {
+                mContainer.classList.remove('hidden');
+                const next = future[0];
+                const d1 = Math.ceil((new Date(next.date) - today) / (1000 * 60 * 60 * 24));
+                document.getElementById('next-item-title').innerText = `${next.set} - ${next.name}`;
+                document.getElementById('next-days').innerText = d1;
+                document.getElementById('next-balance').innerText = `$${Math.max(0, (next.total * next.qty) - next.deposit).toFixed(2)}`;
+
+                if (future.length > 1) {
+                    document.getElementById('upcoming-milestone').style.visibility = 'visible';
+                    const up = future[1];
+                    const d2 = Math.ceil((new Date(up.date) - today) / (1000 * 60 * 60 * 24));
+                    document.getElementById('upcoming-item-title').innerText = `${up.set} - ${up.name}`;
+                    document.getElementById('upcoming-days').innerText = d2;
+                    document.getElementById('upcoming-balance').innerText = `$${Math.max(0, (up.total * up.qty) - up.deposit).toFixed(2)}`;
+                } else {
+                    document.getElementById('upcoming-milestone').style.visibility = 'hidden';
+                }
+            } else {
+                mContainer.classList.add('hidden');
+            }
+        }
+
+        function addOrder() {
+            const name = document.getElementById('itemName').value;
+            const set = document.getElementById('setName').value;
+            const merchant = document.getElementById('merchant').value;
+            const date = document.getElementById('launchDate').value;
+            const total = parseFloat(document.getElementById('totalPrice').value) || 0;
+            const deposit = parseFloat(document.getElementById('deposit').value) || 0;
+            const file = document.getElementById('itemImage').files[0];
+
+            if (!name || !set || !merchant) return;
+
+            const process = (imgData) => {
+                const newO = { id: Date.now(), name, set, merchant, date, total, deposit, qty: 1, archived: false, img: imgData };
+                const dupIdx = orders.findIndex(o => !o.archived && o.name === name && o.set === set && o.merchant === merchant);
+
+                if (dupIdx !== -1) {
+                    pendingOrder = { ...newO, dupIdx };
+                    document.getElementById('duplicate-modal').style.display = 'flex';
+                } else {
+                    orders.push(newO);
+                    finishAdd();
+                }
+            };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => process(e.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                process(null);
+            }
+        }
+
+        document.getElementById('btn-merge').onclick = () => {
+            orders[pendingOrder.dupIdx].qty += 1;
+            orders[pendingOrder.dupIdx].deposit += pendingOrder.deposit;
+            finishAdd();
+        };
+
+        document.getElementById('btn-cancel-merge').onclick = () => { orders.push(pendingOrder); finishAdd(); };
+
+        function finishAdd() {
+            document.getElementById('duplicate-modal').style.display = 'none';
+            pendingOrder = null;
+            ['itemName', 'setName', 'merchant', 'totalPrice', 'deposit', 'launchDate', 'itemImage'].forEach(id => document.getElementById(id).value = '');
+            saveAndRender();
+        }
+
+        function toggleArchive(id) {
+            const i = orders.findIndex(o => o.id === id);
+            if (i !== -1) {
+                if (!orders[i].archived) orders[i].deposit = orders[i].total * orders[i].qty;
+                orders[i].archived = !orders[i].archived;
+                saveAndRender();
+            }
+        }
+
+        function updateField(id, field, val) {
+            const i = orders.findIndex(o => o.id === id);
+            if (i !== -1) { orders[i][field] = parseFloat(val) || 0; saveAndRender(); }
+        }
+
+        function deleteOrder(id) { orders = orders.filter(o => o.id !== id); saveAndRender(); }
+
+        function createRowHTML(o, isArchive) {
+            const fullTotal = o.total * (o.qty || 1);
+            const bal = Math.max(0, fullTotal - o.deposit);
+            const placeholder = `https://via.placeholder.com/100/1e293b/indigo?text=${o.name.charAt(0)}`;
+            const img = o.img || placeholder;
+
+            return `
+                <div class="glass-panel p-4 rounded-3xl flex flex-col sm:flex-row items-center gap-4 ${isArchive ? 'opacity-50' : 'border-slate-800/50'}">
+                    <div class="flex items-center w-full sm:w-auto gap-4">
+                        <img src="${img}" class="image-preview-box flex-shrink-0" alt="Thumb">
+                        <div class="overflow-hidden">
+                            <div class="flex gap-1 mb-1">
+                                <span class="text-[8px] bg-indigo-500/20 text-indigo-300 font-bold px-1.5 py-0.5 rounded uppercase">${o.merchant}</span>
+                            </div>
+                            <h4 class="text-white font-bold text-sm truncate">${o.name}</h4>
+                            <p class="text-[10px] text-slate-500 truncate">${o.set} • ${o.date ? new Date(o.date).toLocaleDateString() : 'TBC'}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 sm:flex items-center gap-4 w-full sm:w-auto sm:ml-auto">
+                        <div class="text-center">
+                            <span class="block text-[8px] text-slate-600 uppercase font-bold">Qty</span>
+                            <input type="number" ${isArchive ? 'disabled' : ''} onchange="updateField(${o.id}, 'qty', this.value)" value="${o.qty}" class="w-8 bg-transparent text-center font-bold text-indigo-400 text-sm">
+                        </div>
+                        <div class="text-center">
+                            <span class="block text-[8px] text-slate-600 uppercase font-bold">Paid</span>
+                            <input type="number" ${isArchive ? 'disabled' : ''} onchange="updateField(${o.id}, 'deposit', this.value)" value="${o.deposit}" class="w-14 bg-transparent text-center font-bold text-slate-300 text-sm">
+                        </div>
+                        <div class="text-right min-w-[60px]">
+                            <span class="block text-[8px] text-slate-600 uppercase font-bold">${isArchive ? 'Cost' : 'Due'}</span>
+                            <span class="text-sm font-black ${isArchive ? 'text-slate-400' : (bal <= 0 ? 'text-emerald-500' : 'text-white')}">$${isArchive ? fullTotal.toFixed(2) : bal.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="toggleArchive(${o.id})" class="flex-1 sm:flex-none p-3 rounded-xl bg-slate-800/50 text-slate-400">
+                            ${isArchive ? 'Restore' : 'Collect'}
+                        </button>
+                        <button onclick="deleteOrder(${o.id})" class="flex-1 sm:flex-none p-3 text-slate-600">
+                            Del
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDashboard() {
+            calculateStats();
+            const list = document.getElementById('orderList'), arcList = document.getElementById('archiveList');
+            list.innerHTML = ''; arcList.innerHTML = '';
+            
+            const active = orders.filter(o => !o.archived).sort((a,b) => new Date(a.date) - new Date(b.date));
+            const archived = orders.filter(o => o.archived).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            active.forEach(o => list.innerHTML += createRowHTML(o, false));
+            archived.forEach(o => arcList.innerHTML += createRowHTML(o, true));
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>
