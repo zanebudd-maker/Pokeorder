@@ -93,6 +93,32 @@
             object-fit: cover;
             background: #1f2937;
         }
+
+        /* Suggestion Dropdown Styles */
+        .suggestions-list {
+            position: absolute;
+            z-index: 50;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            margin-top: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        .suggestion-item {
+            padding: 10px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: #374151;
+            color: #6366f1;
+        }
     </style>
 </head>
 <body class="p-3 md:p-8 pb-20">
@@ -190,18 +216,27 @@
                     
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3">
-                            <div class="col-span-2">
+                            <!-- Product Set with Memory -->
+                            <div class="col-span-2 relative">
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Product Set</label>
-                                <input type="text" id="setName" placeholder="e.g. Paldea Evolved" class="w-full input-style p-3 rounded-xl text-sm">
+                                <input type="text" id="setName" onfocus="showSuggestions('setName')" oninput="showSuggestions('setName')" placeholder="e.g. Paldea Evolved" class="w-full input-style p-3 rounded-xl text-sm" autocomplete="off">
+                                <div id="setName-suggestions" class="suggestions-list hidden no-scrollbar"></div>
                             </div>
-                            <div class="col-span-2">
+                            
+                            <!-- Item Name with Memory -->
+                            <div class="col-span-2 relative">
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Item Name</label>
-                                <input type="text" id="itemName" placeholder="e.g. Elite Trainer Box" class="w-full input-style p-3 rounded-xl text-sm">
+                                <input type="text" id="itemName" onfocus="showSuggestions('itemName')" oninput="showSuggestions('itemName')" placeholder="e.g. Elite Trainer Box" class="w-full input-style p-3 rounded-xl text-sm" autocomplete="off">
+                                <div id="itemName-suggestions" class="suggestions-list hidden no-scrollbar"></div>
                             </div>
-                            <div class="col-span-1">
+
+                            <!-- Merchant with Memory -->
+                            <div class="col-span-1 relative">
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Merchant</label>
-                                <input type="text" id="merchant" placeholder="Store Name" class="w-full input-style p-3 rounded-xl text-sm">
+                                <input type="text" id="merchant" onfocus="showSuggestions('merchant')" oninput="showSuggestions('merchant')" placeholder="Store Name" class="w-full input-style p-3 rounded-xl text-sm" autocomplete="off">
+                                <div id="merchant-suggestions" class="suggestions-list hidden no-scrollbar"></div>
                             </div>
+
                             <div class="col-span-1">
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Release Date</label>
                                 <input type="date" id="launchDate" class="w-full input-style p-3 rounded-xl text-sm">
@@ -290,6 +325,79 @@
         let pendingOrder = null;
         let currentTab = 'active';
         let currentPaymentType = 'deposit';
+
+        // Suggestion Memory Maps
+        function getSuggestions() {
+            const memory = {
+                setName: new Set(),
+                itemName: new Map(), // Item Name -> Price
+                merchant: new Set()
+            };
+
+            orders.forEach(o => {
+                memory.setName.add(o.set);
+                memory.merchant.add(o.merchant);
+                // Remember the most recent price for an item name
+                memory.itemName.set(o.name, o.total);
+            });
+
+            return {
+                setName: Array.from(memory.setName).sort(),
+                itemName: Array.from(memory.itemName.keys()).sort().map(name => ({ name, price: memory.itemName.get(name) })),
+                merchant: Array.from(memory.merchant).sort()
+            };
+        }
+
+        function showSuggestions(fieldId) {
+            const input = document.getElementById(fieldId);
+            const val = input.value.toLowerCase();
+            const container = document.getElementById(`${fieldId}-suggestions`);
+            const memory = getSuggestions();
+            
+            let filtered = [];
+            if (fieldId === 'itemName') {
+                filtered = memory[fieldId].filter(item => item.name.toLowerCase().includes(val));
+            } else {
+                filtered = memory[fieldId].filter(item => item.toLowerCase().includes(val));
+            }
+
+            if (filtered.length > 0) {
+                container.innerHTML = '';
+                filtered.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    
+                    if (fieldId === 'itemName') {
+                        div.innerText = `${item.name} ($${item.price.toFixed(2)})`;
+                        div.onclick = () => selectSuggestion(fieldId, item.name, item.price);
+                    } else {
+                        div.innerText = item;
+                        div.onclick = () => selectSuggestion(fieldId, item);
+                    }
+                    container.appendChild(div);
+                });
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function selectSuggestion(fieldId, value, price = null) {
+            document.getElementById(fieldId).value = value;
+            document.getElementById(`${fieldId}-suggestions`).classList.add('hidden');
+            
+            if (price !== null) {
+                document.getElementById('totalPrice').value = price;
+                handlePriceSync();
+            }
+        }
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                document.querySelectorAll('.suggestions-list').forEach(el => el.classList.add('hidden'));
+            }
+        });
 
         function saveAndRender() {
             localStorage.setItem('pokeTracker_img_v1', JSON.stringify(orders));
