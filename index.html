@@ -83,7 +83,6 @@
             50% { opacity: 0.7; }
         }
 
-        /* Hide scrollbar but keep functionality */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -220,8 +219,13 @@
                                 <input type="number" id="totalPrice" oninput="handlePriceSync()" placeholder="0.00" class="w-full input-style p-3 rounded-xl text-sm">
                             </div>
                             <div>
-                                <label id="depositLabel" class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Paid Already ($)</label>
-                                <input type="number" id="deposit" oninput="updateBalancePreview()" placeholder="0.00" class="w-full input-style p-3 rounded-xl text-sm">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Quantity</label>
+                                <input type="number" id="itemQty" value="1" min="1" oninput="handlePriceSync()" class="w-full input-style p-3 rounded-xl text-sm">
+                            </div>
+                            
+                            <div class="col-span-2">
+                                <label id="depositLabel" class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Total Paid Already ($)</label>
+                                <input type="number" id="deposit" placeholder="0.00" class="w-full input-style p-3 rounded-xl text-sm">
                             </div>
 
                             <div class="col-span-2">
@@ -298,17 +302,14 @@
             document.getElementById('pay-type-full').className = type === 'full' ? 'active' : '';
             document.getElementById('deposit').disabled = type === 'full';
             if (type === 'full') handlePriceSync();
-            updateBalancePreview();
         }
 
         function handlePriceSync() {
             if (currentPaymentType === 'full') {
-                document.getElementById('deposit').value = document.getElementById('totalPrice').value;
+                const unit = parseFloat(document.getElementById('totalPrice').value) || 0;
+                const qty = parseFloat(document.getElementById('itemQty').value) || 1;
+                document.getElementById('deposit').value = (unit * qty).toFixed(2);
             }
-        }
-
-        function updateBalancePreview() {
-            // Internal calculation only for form feedback
         }
 
         function switchTab(tab) {
@@ -343,7 +344,6 @@
             document.getElementById('count-active').innerText = orders.filter(o => !o.archived).length;
             document.getElementById('count-archive').innerText = orders.filter(o => o.archived).length;
 
-            // Milestones Logic
             const future = orders.filter(o => !o.archived && o.date && new Date(o.date) >= today)
                                 .sort((a,b) => new Date(a.date) - new Date(b.date));
 
@@ -377,13 +377,14 @@
             const merchant = document.getElementById('merchant').value;
             const date = document.getElementById('launchDate').value;
             const total = parseFloat(document.getElementById('totalPrice').value) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 1;
             const deposit = parseFloat(document.getElementById('deposit').value) || 0;
             const file = document.getElementById('itemImage').files[0];
 
             if (!name || !set || !merchant) return;
 
             const process = (imgData) => {
-                const newO = { id: Date.now(), name, set, merchant, date, total, deposit, qty: 1, archived: false, img: imgData };
+                const newO = { id: Date.now(), name, set, merchant, date, total, deposit, qty, archived: false, img: imgData };
                 const dupIdx = orders.findIndex(o => !o.archived && o.name === name && o.set === set && o.merchant === merchant);
 
                 if (dupIdx !== -1) {
@@ -405,7 +406,7 @@
         }
 
         document.getElementById('btn-merge').onclick = () => {
-            orders[pendingOrder.dupIdx].qty += 1;
+            orders[pendingOrder.dupIdx].qty += pendingOrder.qty;
             orders[pendingOrder.dupIdx].deposit += pendingOrder.deposit;
             finishAdd();
         };
@@ -415,7 +416,10 @@
         function finishAdd() {
             document.getElementById('duplicate-modal').style.display = 'none';
             pendingOrder = null;
-            ['itemName', 'setName', 'merchant', 'totalPrice', 'deposit', 'launchDate', 'itemImage'].forEach(id => document.getElementById(id).value = '');
+            ['itemName', 'setName', 'merchant', 'totalPrice', 'itemQty', 'deposit', 'launchDate', 'itemImage'].forEach(id => {
+                if(id === 'itemQty') document.getElementById(id).value = 1;
+                else document.getElementById(id).value = '';
+            });
             saveAndRender();
         }
 
@@ -430,7 +434,10 @@
 
         function updateField(id, field, val) {
             const i = orders.findIndex(o => o.id === id);
-            if (i !== -1) { orders[i][field] = parseFloat(val) || 0; saveAndRender(); }
+            if (i !== -1) { 
+                orders[i][field] = parseFloat(val) || 0; 
+                saveAndRender(); 
+            }
         }
 
         function deleteOrder(id) { orders = orders.filter(o => o.id !== id); saveAndRender(); }
@@ -470,11 +477,13 @@
                     </div>
 
                     <div class="flex gap-2 w-full sm:w-auto">
-                        <button onclick="toggleArchive(${o.id})" class="flex-1 sm:flex-none p-3 rounded-xl bg-slate-800/50 text-slate-400">
+                        <button onclick="toggleArchive(${o.id})" class="flex-1 sm:flex-none p-3 rounded-xl bg-slate-800/50 text-slate-400 text-xs font-bold uppercase">
                             ${isArchive ? 'Restore' : 'Collect'}
                         </button>
-                        <button onclick="deleteOrder(${o.id})" class="flex-1 sm:flex-none p-3 text-slate-600">
-                            Del
+                        <button onclick="deleteOrder(${o.id})" class="flex-1 sm:flex-none p-3 text-slate-600 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                         </button>
                     </div>
                 </div>
